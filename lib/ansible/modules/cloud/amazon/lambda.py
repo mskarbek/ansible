@@ -121,14 +121,14 @@ options:
       - The Amazon Resource Name (ARN) of the KMS key used to encrypt your function's environment variables.
     required: false
     default: None
-    version_added: "2.4"
+    version_added: "2.5"
   tracing_config:
     description:
       - A dictionary defining tracing mode. Currently available are Active and PassThrough
     required: false
     default: PassThrough
     choices: [ 'Active', 'PassThrough' ]
-    version_added: "2.4"
+    version_added: "2.5"
 
 author:
     - 'Steyn Huizinga (@steynovich)'
@@ -385,11 +385,10 @@ def main():
             else:
                 if dead_letter_arn != "":
                     func_kwargs.update({'DeadLetterConfig': {'TargetArn': dead_letter_arn}})
-        if kms_key_arn and current_config['KMSKeyArn'] != kms_key_arn:
+        if kms_key_arn and current_config.get('KMSKeyArn', None) != kms_key_arn:
             func_kwargs.update({'KMSKeyArn': kms_key_arn})
         if current_config.get('TracingConfig', {}).get('Mode', {}) != tracing_config:
             func_kwargs.update({'TracingConfig': {'Mode': tracing_config}})
-
 
         # Check for unsupported mutation
         if current_config['Runtime'] != runtime:
@@ -517,7 +516,7 @@ def main():
             func_kwargs.update({'KMSKeyArn': kms_key_arn})
 
         if tracing_config:
-            func_kwargs.update({'TraceConfig': {'Mode': tracing_config}})
+            func_kwargs.update({'TracingConfig': {'Mode': tracing_config}})
 
         # If VPC configuration is given
         if vpc_subnet_ids or vpc_security_group_ids:
