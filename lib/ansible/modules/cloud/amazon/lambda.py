@@ -356,12 +356,17 @@ def main():
         module.fail_json_aws(e, msg="Trying to connect to AWS")
 
     if state == 'present':
-        if role.startswith('arn:aws:iam'):
+        if role.startswith('arn:aws:iam') or role.startswith('arn:aws-us-gov:iam'):
             role_arn = role
         else:
-            # get account ID and assemble ARN
-            account_id = get_account_id(module, region=region, endpoint=ec2_url, **aws_connect_kwargs)
-            role_arn = 'arn:aws:iam::{0}:role/{1}'.format(account_id, role)
+            # get partition and account ID and assemble ARN
+            try:
+                iam_client = boto3_conn(module, conn_type='client', resource='iam',
+                                        region=region, endpoint=ec2_url, **aws_connect_kwargs)
+                arn, partition, service, region, account_id, resource = iam_client.get_user()['User']['Arn'].split(':')
+                role_arn = 'arn:{0}:iam::{1}:role/{2}'.format(partition, account_id, role)
+            except (botocore.exceptions.ClientError, botocore.exceptions.ValidationError) as e:
+                module.fail_json(msg=str(e))
 
     # Get function configuration if present, False otherwise
     current_function = get_current_function(client, name)
